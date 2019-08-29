@@ -1,13 +1,13 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow
- */
-
 import React from "react";
-import { StyleSheet, View, Animated, Text, Button } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Animated,
+  Text,
+  Button,
+  TextInput
+} from "react-native";
+import AsyncStorage from "@react-native-community/async-storage";
 
 class App extends React.Component {
   state = {
@@ -46,16 +46,16 @@ class App extends React.Component {
       "morgen der Jahrestag von Desi's totem Kaninchen ist",
       "morgen der Jahrestag von Desi's totem Meerschweinchen ist",
       "Ich meine Tage habe",
-      "dass ich mit den Jungs in Schottland Röcke anprobieren bin",
-      "dass ich mir beim Anstehen vor der Disco die Bänder gerissen hab",
+      "ich mit den Jungs in Schottland Röcke anprobieren bin",
+      "ich mir beim Anstehen vor der Disco die Bänder gerissen hab",
       "Ich dein Handy meinem Neffen geschenkt habe",
       "mein neugekauftes und von meinem Schwager generalüberholtes Auto zum dritten Mal in dieser Woche in der Werkstatt ist",
       "mein Auspuff schon wieder abgefallen ist. Dabei steht Peugeot doch für echte französische Wertarbeit",
       "Ich übrigens doch nicht zu meinem eigenen Geburtstag kommen kann. Kann mir das feiern doch nicht leisten. Die Geschenke könnt ihr mir ja bei Gelegenheit geben",
-      "dass ich doch nicht zum Fußball kommen kann. Mir ist aufgefallen dass ich mich dafür bewegen müsste. Das ist mir nach einem anstrengenden Tag World of Warcraft zu viel",
-      "dass Fußball doch heute nichts wird. Hab grade gemerkt dass Ich zu fett dafür bin",
-      "dass ich 9 Millionen für Gbamin geboten habe. Ich wollte nur 990.000 bieten! Aber ihr könnt mir ja sicher mein Geld zurück geben. Ansonsten kann ich leider nicht kommen, weil ich jetzt pleite bin",
-      "dass Ich heute doch nicht The Walking Dead gucken kommen kann. Desi will lieber was lebensbejahendes schauen. Aber sie sagt dass sie die Serie sehr interessant findet",
+      "ich doch nicht zum Fußball kommen kann. Mir ist aufgefallen dass ich mich dafür bewegen müsste. Das ist mir nach einem anstrengenden Tag World of Warcraft zu viel",
+      "Fußball doch heute nichts wird. Hab grade gemerkt dass Ich zu fett dafür bin",
+      "ich 9 Millionen für Gbamin geboten habe. Ich wollte nur 990.000 bieten! Aber ihr könnt mir ja sicher mein Geld zurück geben. Ansonsten kann ich leider nicht kommen, weil ich jetzt pleite bin",
+      "Ich heute doch nicht The Walking Dead gucken kommen kann. Desi will lieber was lebensbejahendes schauen. Aber sie sagt dass sie die Serie sehr interessant findet",
       "heut gar keine Postkutsche mehr fährt. Das ist jetzt blöd",
       "Ich mir den Urlaub ja doch gar nicht leisten kann. Gut, dass mir das einen Tag vor Abreise noch eingefallen ist"
     ],
@@ -69,22 +69,52 @@ class App extends React.Component {
       "Jetzt ist es leider zu spät"
     ],
     excuse: null,
+    submitting: false,
     fadeAnim: new Animated.Value(0),
-    scaleAnim: new Animated.Value(1)
+    scaleAnim: new Animated.Value(1),
+    ownExcuses: [],
+    newExcuse: ""
   };
 
-  generateExcuse = () => {
-    const { einleitung, entschuldigung, ausrede, vertroestung } = this.state;
+  async componentDidMount() {
+    try {
+      const ownExcuses = await AsyncStorage.getItem("excuses");
 
-    let eins = einleitung[Math.floor(Math.random() * einleitung.length)];
-    let zwei =
-      entschuldigung[Math.floor(Math.random() * entschuldigung.length)];
-    let drei = ausrede[Math.floor(Math.random() * ausrede.length)];
-    let vier = vertroestung[Math.floor(Math.random() * vertroestung.length)];
+      if (ownExcuses) {
+        this.setState({ ownExcuses: JSON.parse(ownExcuses) });
+      }
+    } catch (err) {
+      console.warn("Sorry, konnte eigene Ausreden nicht laden :-(");
+    }
+  }
 
-    this.setState({ excuse: `${eins}, ${zwei}, dass ${drei}. ${vier}!` });
+  generateExcuse = ownExcuse => {
+    const {
+      einleitung,
+      entschuldigung,
+      ausrede,
+      vertroestung,
+      ownExcuses
+    } = this.state;
+    const percentage = Math.random() * 100;
 
-    if (!this.state.excuse) {
+    if (ownExcuse) {
+      this.setState({ excuse: ownExcuse });
+    } else if (ownExcuses && percentage > 80) {
+      this.setState({
+        excuse: ownExcuses[Math.floor(Math.random() * ownExcuses.length)]
+      });
+    } else {
+      let eins = einleitung[Math.floor(Math.random() * einleitung.length)];
+      let zwei =
+        entschuldigung[Math.floor(Math.random() * entschuldigung.length)];
+      let drei = ausrede[Math.floor(Math.random() * ausrede.length)];
+      let vier = vertroestung[Math.floor(Math.random() * vertroestung.length)];
+
+      this.setState({ excuse: `${eins}, ${zwei}, dass ${drei}. ${vier}!` });
+    }
+
+    if (!this.state.excuse || this.state.fadeAnim != 1) {
       Animated.timing(
         // Animate over time
         this.state.fadeAnim, // The animated value to drive
@@ -111,11 +141,39 @@ class App extends React.Component {
     }
   };
 
+  saveOwnExcuse = async () => {
+    try {
+      const { newExcuse } = this.state;
+
+      if (newExcuse) {
+        await this.setState({ submitting: true });
+        const ownExcuses = await AsyncStorage.getItem("excuses");
+        let newExcuses = [];
+
+        if (ownExcuses) {
+          newExcuses = [...JSON.parse(ownExcuses), newExcuse];
+        }
+
+        await AsyncStorage.setItem("excuses", JSON.stringify(newExcuses));
+        await this.setState({
+          ownExcuses: JSON.stringify(newExcuses),
+          newExcuse: "",
+          submitting: false
+        });
+
+        this.generateExcuse(newExcuse);
+      }
+    } catch (err) {
+      console.warn(err);
+      console.warn("Sorry, konnte die Ausrede nicht speichern :-(");
+    }
+  };
+
   render() {
     return (
       <View style={styles.container}>
         <Text style={styles.header}>Doppelkinn-Domme Ausredengenerator</Text>
-        <Text>Just push the Button to let Domme speak</Text>
+        <Text>Drück den Knopf um Domme labern zu lassen</Text>
         {this.state.excuse && (
           <Animated.View
             style={{
@@ -123,19 +181,32 @@ class App extends React.Component {
               transform: [{ scale: this.state.scaleAnim }]
             }}>
             <Text style={styles.domme}>Domme:</Text>
-            <Animated.View
-              style={{
-                opacity: this.state.fadeAnim
-              }}>
+            <Animated.View style={{ opacity: this.state.fadeAnim }}>
               <Text style={styles.excuse}>{this.state.excuse}</Text>
             </Animated.View>
           </Animated.View>
         )}
 
+        <View>
+          <Text>Füg deine eigene Ausrede hinzu</Text>
+          <TextInput
+            underlineColorAndroid="lightpink"
+            disabled={this.state.submitting}
+            placeholder="Sorry Mädels,..."
+            onChangeText={newExcuse => this.setState({ newExcuse })}
+            value={this.state.newExcuse}></TextInput>
+          <Button
+            color="pink"
+            title="Save"
+            onPress={() => this.saveOwnExcuse()}
+            disabled={this.state.submitting}
+          />
+        </View>
+
         <View style={styles.button}>
           <Button
             color="purple"
-            onPress={this.generateExcuse}
+            onPress={() => this.generateExcuse(null)}
             title="Make Domme speak"
           />
         </View>
@@ -163,7 +234,8 @@ const styles = StyleSheet.create({
   dommeTalk: {
     backgroundColor: "#ffdab9",
     paddingTop: 10,
-    paddingBottom: 10
+    paddingBottom: 10,
+    alignSelf: "stretch"
   },
   domme: {
     paddingLeft: 5,
