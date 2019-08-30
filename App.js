@@ -5,8 +5,14 @@ import {
   Animated,
   Text,
   Button,
-  TextInput
+  TextInput,
+  TouchableOpacity,
+  Linking
 } from "react-native";
+import FontAwesome, {
+  RegularIcons,
+  BrandIcons
+} from "react-native-fontawesome";
 import AsyncStorage from "@react-native-community/async-storage";
 
 class App extends React.Component {
@@ -45,10 +51,12 @@ class App extends React.Component {
       "morgen der Jahrestag von Desi's totem Hamster ist",
       "morgen der Jahrestag von Desi's totem Kaninchen ist",
       "morgen der Jahrestag von Desi's totem Meerschweinchen ist",
+      "Desi's Katze zum Tierarzt muss, weil sie einen Zahn gezogen bekommt",
       "Ich meine Tage habe",
       "ich mit den Jungs in Schottland Röcke anprobieren bin",
       "ich mir beim Anstehen vor der Disco die Bänder gerissen hab",
       "Ich dein Handy meinem Neffen geschenkt habe",
+      "Ich morgen früh den ganzen Tag Heartstone spielen wollte. Dafür muss ich fit sein",
       "mein neugekauftes und von meinem Schwager generalüberholtes Auto zum dritten Mal in dieser Woche in der Werkstatt ist",
       "mein Auspuff schon wieder abgefallen ist. Dabei steht Peugeot doch für echte französische Wertarbeit",
       "Ich übrigens doch nicht zu meinem eigenen Geburtstag kommen kann. Kann mir das feiern doch nicht leisten. Die Geschenke könnt ihr mir ja bei Gelegenheit geben",
@@ -164,7 +172,6 @@ class App extends React.Component {
         this.generateExcuse(newExcuse);
       }
     } catch (err) {
-      console.warn(err);
       console.warn("Sorry, konnte die Ausrede nicht speichern :-(");
     }
   };
@@ -175,16 +182,40 @@ class App extends React.Component {
         <Text style={styles.header}>Doppelkinn-Domme Ausredengenerator</Text>
         <Text>Drück den Knopf um Domme labern zu lassen</Text>
         {this.state.excuse && (
-          <Animated.View
-            style={{
-              ...styles.dommeTalk,
-              transform: [{ scale: this.state.scaleAnim }]
-            }}>
-            <Text style={styles.domme}>Domme:</Text>
-            <Animated.View style={{ opacity: this.state.fadeAnim }}>
-              <Text style={styles.excuse}>{this.state.excuse}</Text>
+          <React.Fragment>
+            <Animated.View
+              style={{
+                ...styles.dommeTalk,
+                transform: [{ scale: this.state.scaleAnim }]
+              }}>
+              <Text style={styles.domme}>Domme:</Text>
+              <Animated.View style={{ opacity: this.state.fadeAnim }}>
+                <Text style={styles.excuse}>{this.state.excuse}</Text>
+              </Animated.View>
+
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    await Linking.openURL(
+                      `whatsapp://send?text=${this.state.excuse}`
+                    );
+                  } catch (err) {
+                    console.warn(
+                      "Sorry, konnte nicht auf WhatsApp zugreifen :-("
+                    );
+                  }
+                }}
+                style={styles.whatsappContainer}>
+                <FontAwesome
+                  style={styles.whatsappIcon}
+                  icon={BrandIcons.whatsapp}
+                />
+                <Text style={styles.whatsapp}>
+                  Teile die Ausrede via WhatsApp
+                </Text>
+              </TouchableOpacity>
             </Animated.View>
-          </Animated.View>
+          </React.Fragment>
         )}
 
         <View>
@@ -196,7 +227,7 @@ class App extends React.Component {
             onChangeText={newExcuse => this.setState({ newExcuse })}
             value={this.state.newExcuse}></TextInput>
           <Button
-            color="pink"
+            color="#fa8072"
             title="Save"
             onPress={() => this.saveOwnExcuse()}
             disabled={this.state.submitting}
@@ -205,7 +236,7 @@ class App extends React.Component {
 
         <View style={styles.button}>
           <Button
-            color="purple"
+            color="#ff1493"
             onPress={() => this.generateExcuse(null)}
             title="Make Domme speak"
           />
@@ -234,7 +265,7 @@ const styles = StyleSheet.create({
   dommeTalk: {
     backgroundColor: "#ffdab9",
     paddingTop: 10,
-    paddingBottom: 10,
+    paddingBottom: 5,
     alignSelf: "stretch"
   },
   domme: {
@@ -248,6 +279,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontStyle: "italic",
     lineHeight: 20
+  },
+  whatsappContainer: {
+    paddingLeft: 5,
+    paddingTop: 10,
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  whatsapp: {
+    fontSize: 10,
+    fontStyle: "italic",
+    alignSelf: "flex-start",
+    color: "#25D366"
+  },
+  whatsappIcon: {
+    color: "#25D366",
+    paddingRight: 3
   },
   button: {
     marginBottom: 40
